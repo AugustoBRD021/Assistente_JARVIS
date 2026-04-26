@@ -15,9 +15,16 @@ Este arquivo contém a classe principal do assistente JARVIS, responsável por:
 import sys      # Para manipulação de argumentos de linha de comando e saída do sistema
 import time     # Para controle de tempo e delays
 import threading  # Para operações concorrentes (escuta contínua sem bloquear)
+import queue    # Para fila de comandos entre threads
+import asyncio  # Para operações assíncronas (edge-tts)
+import subprocess  # Para executar comandos do sistema (ffmpeg)
 from pathlib import Path  # Para manipulação de caminhos de arquivos de forma segura
-import pyttsx3          # Para o JARVIS falar
+import numpy as np  # Para processar arrays de áudio
 import sounddevice as sd  # Para verificar o microfone
+import edge_tts  # Para síntese de voz neural da Microsoft
+import simpleaudio  # Para reprodução de áudio
+import tempfile  # Para arquivos temporários
+import os  # Para manipulação de arquivos
 
 # Importação de nossos módulos personalizados
 from test_audio import VoskRecognizer  # Importa nossa classe de reconhecimento de voz já testada
@@ -45,17 +52,21 @@ class JarvisAssistant:
         """
         # Atributos de controle do sistema
         self.running = False          # Flag para controlar se o sistema está rodando
-        self.wake_word = "jarvis"     # Palavra de ativação do assistente
+        self.wake_word = "nova"       # Palavra de ativação do assistente
         self.mode = "passive"         # Modo inicial: passivo (apenas escutando wake word)
         
         # Componentes do sistema (serão inicializados em initialize_system)
         self.vosk_recognizer = None    # Reconhecedor de voz Vosk
-        self.voice_engine = None       # Sintetizador de voz pyttsx3
         self.audio_devices = []        # Lista de dispositivos de áudio
         self.selected_device = None    # Dispositivo de áudio selecionado
         
+        # Atributos para escuta contínua (PASSO 3)
+        self.listening_thread = None        # Thread para escuta contínua em background
+        self.command_queue = queue.Queue()  # Fila para comandos reconhecidos
+        self.last_wake_word_time = 0        # Timestamp da última wake word detectada
+        
         # Mensagens de inicialização para feedback ao usuário
-        print("JARVIS - Assistente Virtual Inteligente")
+        print("NOVA - Assistente Virtual Inteligente")
         print("Inicializando sistema...")
     
     def initialize_system(self):
@@ -97,39 +108,16 @@ class JarvisAssistant:
             
             print("[OK] Reconhecimento de voz configurado")
             
-            # 2. Configurar o sintetizador de voz
+            # 2. Configurar síntese de voz (edge-tts)
             print("2. Configurando síntese de voz...")
             try:
-                self.voice_engine = pyttsx3.init()
+                # Teste rápido do edge-tts
+                print("[INFO] Usando edge-tts com voz pt-BR-FranciscaNeural")
+                print("[OK] Síntese de voz configurada")
             except Exception as e:
-                print(f"[ERRO] Erro ao inicializar pyttsx3: {e}")
-                print("[INFO] Verifique se a biblioteca pyttsx3 está instalada: pip install pyttsx3")
-                print("[INFO] No Windows, pode ser necessário instalar drivers de áudio adicionais")
+                print(f"[ERRO] Erro ao configurar síntese de voz: {e}")
+                print("[INFO] Verifique se edge-tts está instalado: pip install edge-tts")
                 return False
-            
-            # Configurar voz em português se disponível
-            voices = self.voice_engine.getProperty('voices')
-            portuguese_voice_found = False
-            
-            for voice in voices:
-                try:
-                    lang = getattr(voice, 'languages', [getattr(voice, 'lang', 'unknown')])[0] if hasattr(voice, 'languages') else getattr(voice, 'lang', 'unknown')
-                    if 'pt' in str(lang).lower() or 'brazil' in voice.name.lower():
-                        self.voice_engine.setProperty('voice', voice.id)
-                        print(f"[OK] Voz selecionada: {voice.name}")
-                        portuguese_voice_found = True
-                        break
-                except:
-                    continue
-            
-            if not portuguese_voice_found:
-                print("[AVISO] Voz em português não encontrada, usando padrão")
-            
-            # Configurar velocidade e volume
-            self.voice_engine.setProperty('rate', 200)  # Velocidade normal
-            self.voice_engine.setProperty('volume', 0.9)  # Volume alto
-            
-            print("[OK] Síntese de voz configurada")
             
             # 3. Verificar dispositivos de áudio
             print("3. Verificando dispositivos de áudio...")
@@ -168,17 +156,14 @@ class JarvisAssistant:
             
             # 4. Testar componentes
             print("4. Testando componentes...")
-            
-            # Testar síntese de voz
-            print("   Testando síntese de voz...")
-            self.speak("Sistema JARVIS online e pronto para uso.")
+            print("   Síntese de voz será testada no loop principal.")
             
             # 5. Configurar atributos finais
             print("5. Finalizando configuração...")
             self.running = True
             
-            print("\n[OK] Sistema JARVIS inicializado com sucesso!")
-            print("[INFO] Diga 'Jarvis' seguido do seu comando.")
+            print("\n[OK] Sistema NOVA inicializado com sucesso!")
+            print("[INFO] Diga 'Nova' seguido do seu comando.")
             print("[INFO] Pressione Ctrl+C para encerrar.")
             print("-" * 50)
             
@@ -194,35 +179,219 @@ class JarvisAssistant:
     
     def speak(self, text):
         """
-        Sintetizar resposta em voz
+        Sintetiza voz com edge-tts e reproduz usando ffmpeg + winsound (nativo do Windows)
         
         Args:
             text (str): Texto a ser falado pelo assistente
         """
+        print(f"NOVA: {text}")
+        
+        async def _falar():
+            # Gera o áudio com a voz Francisca BR em formato MP3
+            communicate = edge_tts.Communicate(text, voice="pt-BR-FranciscaNeural")
+            
+            # Salva em arquivo temporário MP3
+            with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+                tmp_path = f.name
+            
+            await communicate.save(tmp_path)
+            return tmp_path
+        
         try:
-            if self.voice_engine:
-                print(f"JARVIS: {text}")
-                self.voice_engine.say(text)
-                self.voice_engine.runAndWait()
+            # Gera o arquivo de áudio MP3
+            tmp_path = asyncio.run(_falar())
+            
+            # Converte MP3 para WAV usando ffmpeg (caminho completo)
+            wav_path = tmp_path.replace(".mp3", ".wav")
+            ffmpeg_path = r"C:\ffmpeg\ffmpeg-8.1-essentials_build\bin\ffmpeg.exe"
+            
+            if os.path.exists(ffmpeg_path):
+                result = subprocess.run([ffmpeg_path, '-i', tmp_path, wav_path], 
+                                      capture_output=True, text=True)
+                
+                if result.returncode == 0:
+                    # Reproduz com winsound (nativo do Windows)
+                    import winsound
+                    winsound.PlaySound(wav_path, winsound.SND_FILENAME)
+                    
+                    # Remove arquivos temporários após reprodução
+                    os.unlink(tmp_path)
+                    os.unlink(wav_path)
+                else:
+                    # Fallback: player padrão
+                    print(f"[INFO] ffmpeg falhou, usando player padrão")
+                    os.startfile(tmp_path)
+                    time.sleep(2)
+                    os.unlink(tmp_path)
             else:
-                print(f"[ERRO] Motor de voz não inicializado: {text}")
+                # Fallback: player padrão
+                print(f"[INFO] ffmpeg não encontrado em {ffmpeg_path}, usando player padrão")
+                os.startfile(tmp_path)
+                time.sleep(2)
+                os.unlink(tmp_path)
+            
         except Exception as e:
             print(f"[ERRO] Falha na síntese de voz: {e}")
+    
+    def listen_for_wake_word(self):
+        """
+        Escuta continuamente pela wake word em duas fases
+        
+        FASE 1 - Escuta passiva pela wake word (chunks de 2s)
+        FASE 2 - Wake word detectada, aguarda comando (até 5s)
+        
+        Funciona em loop contínuo enquanto self.running = True
+        """
+        print("[INFO] Iniciando escuta contínua pela wake word...")
+        
+        # Variações fonéticas da wake word
+        WAKE_VARIATIONS = ['nova', 'nóva', 'nôva', 'nôba', 'nóba']
+        sample_rate = 16000
+        
+        def capture_speech(duration=3):
+            """
+            Captura áudio e retorna o texto reconhecido, ou None
+            
+            Args:
+                duration (int): Duração da captura em segundos
+            
+            Returns:
+                str: Texto reconhecido ou None se falhar
+            """
+            import json
+            chunk_size = int(sample_rate * duration)
+            try:
+                audio_chunk = sd.rec(
+                    frames=chunk_size,
+                    samplerate=sample_rate,
+                    channels=1,
+                    dtype='int16',
+                    device=self.selected_device
+                )
+                sd.wait()
+                audio_bytes = audio_chunk.tobytes()
+                
+                if self.vosk_recognizer.recognizer.AcceptWaveform(audio_bytes):
+                    result = json.loads(self.vosk_recognizer.recognizer.Result())
+                    return result.get('text', '').strip()
+                else:
+                    partial = json.loads(self.vosk_recognizer.recognizer.PartialResult())
+                    return partial.get('text', '').strip()
+                    
+            except Exception as e:
+                print(f"[ERRO] Falha ao capturar áudio: {e}")
+                return None
+        
+        while self.running:
+            # FASE 1 - Escuta passiva pela wake word (chunks de 2s)
+            text = capture_speech(duration=2)
+            
+            if not text:
+                continue
+            
+            print(f"[DEBUG] Ouvido: '{text}'")
+            
+            if not any(w in text.lower() for w in WAKE_VARIATIONS):
+                continue  # Não foi a wake word, ignora
+            
+            # FASE 2 - Wake word detectada, aguarda o comando
+            print("[INFO] Wake word detectada!")
+            self.speak("Sim?")
+            
+            # Pequena pausa para o TTS terminar antes de escutar de novo
+            time.sleep(0.8)
+            
+            print("[INFO] Aguardando comando...")
+            command = capture_speech(duration=7)
+            
+            if not command:
+                self.speak("Não ouvi nada. Pode repetir?")
+                continue
+            
+            # Remove a wake word do texto caso tenha vindo junto
+            for w in WAKE_VARIATIONS:
+                command = command.lower().replace(w, '').strip()
+            
+            if not command:
+                self.speak("Não ouvi o comando. O que deseja?")
+                continue
+            
+            print(f"[INFO] Comando capturado: '{command}'")
+            self.command_queue.put(command)
+    
+    def process_command(self, command):
+        """
+        Processar comando reconhecido pelo usuário
+        
+        Args:
+            command (str): Texto do comando reconhecido
+        
+        Este método:
+        - Analisa o comando para identificar a intenção
+        - Executa a ação apropriada
+        - Gera uma resposta
+        - Usa speak() para vocalizar a resposta
+        """
+        command_lower = command.lower().strip()
+        
+        # Comandos básicos
+        if "olá" in command_lower or "oi" in command_lower:
+            self.speak("Olá! Como posso ajudar?")
+        elif "que horas são" in command_lower or "horas" in command_lower:
+            from datetime import datetime
+            hora = datetime.now().strftime("%H:%M")
+            self.speak(f"Agora são {hora}")
+        elif "que dia é hoje" in command_lower or "data" in command_lower:
+            from datetime import datetime
+            data = datetime.now().strftime("%d de %B de %Y")
+            self.speak(f"Hoje é {data}")
+        elif "encerrar" in command_lower or "pare" in command_lower:
+            self.speak("Encerrando sistema...")
+            self.running = False
+        else:
+            self.speak("Desculpe, não entendi o comando.")
     
     def run(self):
         """
         Loop principal do assistente
         
-        Este método será implementado nos próximos passos para:
-        - Manter o sistema em execução contínua
-        - Gerenciar transições entre modos (passive → active → processing → passive)
-        - Processar comandos reconhecidos
-        - Executar ações e gerar respostas
-        - Tratar exceções e erros gracefulmente
+        Este método:
+        - Inicia a thread de escuta contínua
+        - Gerencia transições entre modos
+        - Processa comandos da queue
+        - Mantém sistema rodando até encerramento
+        - Encerra thread gracefulmente
         """
-        print("Sistema JARVIS iniciado!")
-        # Implementar nos próximos passos
-        pass
+        print("[INFO] Iniciando loop principal do JARVIS...")
+        
+        try:
+            # Iniciar thread de escuta (só escuta, não fala)
+            self.listening_thread = threading.Thread(
+                target=self.listen_for_wake_word,
+                daemon=True
+            )
+            self.listening_thread.start()
+            print("[OK] Thread de escuta iniciada")
+            
+            # Testar síntese de voz
+            self.speak("Sistema NOVA online e pronto para uso.")
+            
+            # Loop principal — processa comandos
+            while self.running:
+                try:
+                    command = self.command_queue.get(timeout=0.05)
+                    print(f"[INFO] Comando recebido: '{command}'")
+                    self.process_command(command)
+                except queue.Empty:
+                    continue
+                except Exception as e:
+                    print(f"[ERRO] Erro ao processar comando: {e}")
+            
+            print("[INFO] Loop principal encerrado")
+            
+        except Exception as e:
+            print(f"[ERRO] Erro no loop principal: {e}")
+            self.running = False
 
 
 def main():
@@ -244,7 +413,9 @@ def main():
         jarvis = JarvisAssistant()
         
         # Inicializar componentes do sistema
-        jarvis.initialize_system()
+        if not jarvis.initialize_system():
+            print("[FATAL] Inicialização falhou. Encerrando.")
+            sys.exit(1)
         
         # Iniciar loop principal do assistente
         jarvis.run()

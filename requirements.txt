@@ -1,0 +1,18 @@
+# Reconhecimento de voz (alternativas sem PyAudio)
+SpeechRecognition==3.16.1
+
+# Síntese de voz
+pyttsx3==2.99
+
+# Alternativas para captura de áudio
+sounddevice==0.5.5
+numpy>=2.4.4
+
+# Utilitários de áudio
+pydub==0.25.1
+
+# Para processamento de áudio
+scipy>=1.11.0
+
+# Para gravação de áudio sem PyAudio
+webrtcvad==2.0.10

@@ -79,7 +79,7 @@ class VoiceEngine:
 ### 2. Processador de IA (ai_processor.py)
 
 #### Funcionalidades
-- Integração com OpenAI API
+- Integração com Claude API
 - Processamento de linguagem natural
 - Extração de intenções
 - Geração de respostas contextuais
@@ -87,8 +87,8 @@ class VoiceEngine:
 #### Classes Principais
 ```python
 class AIProcessor:
-    def __init__(self, api_key, model="gpt-3.5-turbo"):
-        self.client = openai.OpenAI(api_key=api_key)
+    def __init__(self, api_key, model="claude-3-sonnet-20240229"):
+        self.client = anthropic.Anthropic(api_key=api_key)
         self.model = model
         self.context = []
         
@@ -103,7 +103,7 @@ class AIProcessor:
 ```
 
 #### Dependências
-- `openai`
+- `anthropic`
 - `langchain`
 - `transformers` (para modelos locais)
 
@@ -287,7 +287,7 @@ VOICE_SETTINGS = {
 
 # Configurações de IA
 AI_SETTINGS = {
-    'model': 'gpt-3.5-turbo',
+    'model': 'claude-3-sonnet-20240229',
     'max_tokens': 150,
     'temperature': 0.7,
     'timeout': 30

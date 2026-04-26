@@ -9,7 +9,7 @@ JARVIS é um assistente virtual completo que combina software e hardware para cr
 ### 🎯 Reconhecimento de Voz
 - Captura de áudio através de microfone
 - Processamento e interpretação de comandos em linguagem natural
-- Respostas inteligentes com integração de IA (ChatGPT)
+- Respostas inteligentes com integração de IA (Claude)
 
 ### 🖥️ Automação de Software
 - Execução de comandos no sistema operacional
@@ -39,7 +39,7 @@ JARVIS é um assistente virtual completo que combina software e hardware para cr
                        ┌─────────────────┐
                        │  Inteligência   │
                        │  Artificial     │
-                       │   (ChatGPT)     │
+                       │   (Claude)      │
                        └─────────────────┘
                               │
                               ▼
@@ -60,7 +60,7 @@ JARVIS é um assistente virtual completo que combina software e hardware para cr
 
 ### Software (Python)
 - **Reconhecimento de Voz**: Bibliotecas como SpeechRecognition
-- **Processamento de IA**: Integração com OpenAI API
+- **Processamento de IA**: Integração com Claude API
 - **Automação**: Bibliotecas de sistema operacional
 - **Comunicação**: Protocolos serial e rede
 
@@ -100,7 +100,7 @@ JARVIS é um assistente virtual completo que combina software e hardware para cr
 
 ### Software
 - **Python**: Linguagem principal
-- **OpenAI API**: Processamento de linguagem
+- **anthropic**: Processamento de linguagem com Claude
 - **SpeechRecognition**: Reconhecimento de voz
 - **PySerial**: Comunicação serial
 - **Socket**: Comunicação rede

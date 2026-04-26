@@ -95,7 +95,7 @@ gtts==2.3.2
 pyttsx3==2.90
 
 # Inteligência Artificial
-openai==1.3.0
+anthropic==0.7.8
 langchain==0.0.340
 transformers==4.35.0
 
@@ -138,8 +138,8 @@ touch .env
 
 #### .env
 ```env
-# OpenAI API Key
-OPENAI_API_KEY=sk-your-openai-api-key-here
+# Anthropic API Key
+ANTHROPIC_API_KEY=your-claude-api-key-here
 
 # Configurações de voz
 VOICE_LANGUAGE=pt-BR

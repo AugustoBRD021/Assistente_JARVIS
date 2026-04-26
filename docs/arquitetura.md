@@ -83,7 +83,7 @@ O sistema JARVIS segue uma arquitetura modular e distribuída, dividida em três
 
 #### Módulo de Processamento de Linguagem Natural
 - **Função**: Interpretar intenções e extrair informações
-- **Tecnologia**: OpenAI GPT API
+- **Tecnologia**: Anthropic Claude API
 - **Capacidades**:
   - Compreensão de contexto
   - Extração de entidades

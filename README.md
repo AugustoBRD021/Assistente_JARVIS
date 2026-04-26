@@ -131,6 +131,62 @@ JARVIS é um assistente virtual completo que combina software e hardware para cr
 - [Componentes de Hardware](docs/hardware.md)
 - [Protocolos de Comunicação](docs/comunicacao.md)
 
+## Fluxo de Trabalho Git
+
+### Branches Principais
+
+- **main**: Branch principal estável (produção)
+  - Contém código testado e funcional
+  - PASSO 2 completo: inicialização do sistema
+  - Sistema 100% funcional com Vosk e pyttsx3
+
+- **feature/escuta-continua**: Branch de desenvolvimento
+  - Desenvolvimento do PASSO 3 (escuta contínua)
+  - Alterações experimentais não afetam o main
+  - Quando pronto, será mergeado para main
+
+### Como Trabalhar com Branches
+
+#### Criar nova branch de desenvolvimento:
+```bash
+git checkout -b feature/nome-da-feature
+```
+
+#### Ver branch atual:
+```bash
+git branch --show-current
+```
+
+#### Listar todas as branches:
+```bash
+git branch
+```
+
+#### Trocar de branch:
+```bash
+git checkout nome-da-branch
+```
+
+#### Deletar branch:
+```bash
+git branch -d nome-da-branch
+```
+
+### Fluxo de Desenvolvimento
+
+1. **Criar branch** a partir de main
+2. **Implementar** novas funcionalidades
+3. **Testar** completamente
+4. **Commit** alterações
+5. **Push** para GitHub
+6. **Merge** para main (quando aprovado)
+
+### Status Atual do Projeto
+
+- ✅ **PASSO 1**: Estrutura básica do main.py
+- ✅ **PASSO 2**: Inicialização completa do sistema (main)
+- 🔄 **PASSO 3**: Escuta contínua (feature/escuta-continua - em desenvolvimento)
+
 ## Licença
 
 Este projeto está sob licença MIT. Consulte o arquivo LICENSE para mais detalhes.

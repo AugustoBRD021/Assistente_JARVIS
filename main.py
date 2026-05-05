@@ -62,7 +62,7 @@ class JarvisAssistant:
         
         # Atributos para escuta contínua (PASSO 3)
         self.listening_thread = None        # Thread para escuta contínua em background
-        self.command_queue = queue.Queue()  # Fila para comandos reconhecidos
+        self.command_queue = queue.Queue()  # Fila de comandos entre threads
         self.last_wake_word_time = 0        # Timestamp da última wake word detectada
         
         # Mensagens de inicialização para feedback ao usuário

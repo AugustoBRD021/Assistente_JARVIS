@@ -1,8 +1,8 @@
-# Componentes de Hardware - JARVIS
+# Componentes de Hardware - NOVA
 
 ## Visão Geral
 
-O hardware do JARVIS consiste em microcontroladores programados em C/C++ que atuam como interface física entre o sistema inteligente e o mundo real, controlando sensores e atuadores diversos.
+O hardware do NOVA consiste em microcontroladores programados em C/C++ que atuam como interface física entre o sistema inteligente e o mundo real, controlando sensores e atuadores diversos.
 
 ## Plataformas Suportadas
 
@@ -353,7 +353,7 @@ public:
 
 // Instâncias globais
 SerialHandler serialHandler(&Serial, SERIAL_BAUDRATE);
-WiFiHandler wifiHandler("JARVIS_Network", "password123", WIFI_PORT);
+WiFiHandler wifiHandler("NOVA_Network", "password123", WIFI_PORT);
 RelayController relayController;
 LEDController ledController;
 SensorManager sensorManager;
@@ -375,7 +375,7 @@ void setup() {
     pinMode(LED_STATUS_PIN, OUTPUT);
     digitalWrite(LED_STATUS_PIN, HIGH);
     
-    Serial.println("JARVIS Hardware Controller v1.0");
+    Serial.println("NOVA Hardware Controller v1.0");
 }
 
 void loop() {

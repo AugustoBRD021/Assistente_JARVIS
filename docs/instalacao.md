@@ -1,4 +1,4 @@
-# Guia de Instalação e Configuração - JARVIS
+# Guia de Instalação e Configuração - NOVA
 
 ## Pré-requisitos
 
@@ -57,8 +57,8 @@ pip3 --version
 
 ```bash
 # Criar diretório do projeto
-mkdir jarvis-assistant
-cd jarvis-assistant
+mkdir nova-assistant
+cd nova-assistant
 
 # Criar ambiente virtual
 python -m venv jarvis-env
@@ -75,7 +75,7 @@ source jarvis-env/bin/activate
 
 ```bash
 # Clonar repositório (se disponível)
-git clone https://github.com/usuario/jarvis-assistant.git .
+git clone https://github.com/usuario/nova-assistant.git .
 
 # Ou criar estrutura manualmente
 mkdir src config docs tests
@@ -144,7 +144,7 @@ ANTHROPIC_API_KEY=your-claude-api-key-here
 # Configurações de voz
 VOICE_LANGUAGE=pt-BR
 VOICE_ENGINE=google
-WAKE_WORD=jarvis
+WAKE_WORD=nova
 
 # Configurações de hardware
 SERIAL_PORT=auto
@@ -295,7 +295,7 @@ import socket
 import threading
 
 def scan_network(port=8080):
-    """Escaneia rede em busca de dispositivos JARVIS"""
+    """Escaneia rede em busca de dispositivos NOVA"""
     devices = []
     
     def check_host(ip):
@@ -535,7 +535,7 @@ AI_CONFIG = {
 #### Firewall
 ```bash
 # Windows (PowerShell - Administrador)
-New-NetFirewallRule -DisplayName "JARVIS" -Direction Inbound -Port 8080 -Protocol TCP -Action Allow
+New-NetFirewallRule -DisplayName "NOVA" -Direction Inbound -Port 8080 -Protocol TCP -Action Allow
 
 # Linux
 sudo ufw allow 8080/tcp
@@ -636,10 +636,10 @@ LOG_LEVEL = 'DEBUG'
 #### Verificar Logs
 ```bash
 # Ver logs em tempo real
-tail -f logs/jarvis.log
+tail -f logs/nova.log
 
 # Filtrar erros
-grep ERROR logs/jarvis.log
+grep ERROR logs/nova.log
 ```
 
 ## Próximos Passos
@@ -655,4 +655,4 @@ grep ERROR logs/jarvis.log
 - **Documentação**: [docs/](../docs/)
 - **Issues**: GitHub Issues
 - **Comunidade**: Fórum do projeto
-- **Email**: support@jarvis-project.com
+- **Email**: support@nova-project.com

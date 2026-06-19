@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-JARVIS - Assistente Virtual Inteligente
+NOVA - Assistente Virtual Inteligente
 Ponto de entrada principal do sistema
 
-Este arquivo contém a classe principal do assistente JARVIS, responsável por:
+Este arquivo contém a classe principal do assistente NOVA, responsável por:
 - Inicializar todos os componentes do sistema
 - Gerenciar os modos de operação (passivo, ativo, processamento)
 - Controlar o loop principal do assistente
@@ -30,9 +30,9 @@ import os  # Para manipulação de arquivos
 from test_audio import VoskRecognizer  # Importa nossa classe de reconhecimento de voz já testada
 
 
-class JarvisAssistant:
+class NovaAssistant:
     """
-    Classe principal do assistente JARVIS
+    Classe principal do assistente NOVA
     
     Responsabilidades:
     - Gerenciar o estado geral do sistema
@@ -43,11 +43,11 @@ class JarvisAssistant:
     
     def __init__(self):
         """
-        Construtor da classe JarvisAssistant
+        Construtor da classe NovaAssistant
         
         Inicializa os atributos básicos do sistema:
         - running: Controla se o sistema está ativo ou deve encerrar
-        - wake_word: Palavra que ativa o assistente ("jarvis")
+        - wake_word: Palavra que ativa o assistente ("nova")
         - mode: Modo atual de operação ("passive", "active", "processing")
         """
         # Atributos de controle do sistema
@@ -362,7 +362,7 @@ class JarvisAssistant:
         - Mantém sistema rodando até encerramento
         - Encerra thread gracefulmente
         """
-        print("[INFO] Iniciando loop principal do JARVIS...")
+        print("[INFO] Iniciando loop principal do NOVA...")
         
         try:
             # Iniciar thread de escuta (só escuta, não fala)
@@ -410,15 +410,15 @@ def main():
     """
     try:
         # Criar instância do assistente
-        jarvis = JarvisAssistant()
+        nova = NovaAssistant()
         
         # Inicializar componentes do sistema
-        if not jarvis.initialize_system():
+        if not nova.initialize_system():
             print("[FATAL] Inicialização falhou. Encerrando.")
             sys.exit(1)
         
         # Iniciar loop principal do assistente
-        jarvis.run()
+        nova.run()
         
     except KeyboardInterrupt:
         # Trata interrupção do usuário (Ctrl+C)

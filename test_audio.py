@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Script de teste de audio do JARVIS usando Vosk
+Script de teste de audio do NOVA usando Vosk
 Reconhecimento de voz offline com Vosk
 """
 
@@ -190,7 +190,7 @@ def test_speech_synthesis():
         
         # Testar fala
         print("Testando sintese de voz...")
-        engine.say("Teste de sintese de voz do JARVIS com Vosk")
+        engine.say("Teste de sintese de voz do NOVA com Vosk")
         engine.runAndWait()
         print("[OK] Sintese de voz funcionando")
         return True
@@ -245,7 +245,7 @@ def test_vosk_alternative():
 
 def main():
     """Funcao principal de teste"""
-    print("JARVIS - Teste de Audio com Vosk")
+    print("NOVA - Teste de Audio com Vosk")
     print("=" * 40)
     
     # Testar importacoes
@@ -269,7 +269,7 @@ def main():
             return False
     
     print("\nTodos os testes passaram com sucesso!")
-    print("[OK] Sistema de audio do JARVIS esta pronto para uso.")
+    print("[OK] Sistema de audio do NOVA esta pronto para uso.")
     print("\nNota: Usando Vosk para reconhecimento offline quando disponivel.")
     return True
 

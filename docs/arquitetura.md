@@ -1,8 +1,8 @@
-# Arquitetura do Sistema JARVIS
+# Arquitetura do Sistema NOVA
 
 ## Visão Geral da Arquitetura
 
-O sistema JARVIS segue uma arquitetura modular e distribuída, dividida em três camadas principais:
+O sistema NOVA segue uma arquitetura modular e distribuída, dividida em três camadas principais:
 
 1. **Camada de Interface** - Responsável pela interação com o usuário
 2. **Camada de Processamento** - Núcleo inteligente do sistema

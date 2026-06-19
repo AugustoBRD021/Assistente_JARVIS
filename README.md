@@ -1,8 +1,8 @@
-# JARVIS - Assistente Virtual Inteligente
+# NOVA - Assistente Virtual Inteligente
 
 ## Visão Geral
 
-JARVIS é um assistente virtual completo que combina software e hardware para criar uma interface inteligente entre humanos e máquinas. O sistema utiliza Python como núcleo principal de processamento e microcontroladores para interação física com o ambiente.
+NOVA é um assistente virtual completo que combina software e hardware para criar uma interface inteligente entre humanos e máquinas. O sistema utiliza Python como núcleo principal de processamento e microcontroladores para interação física com o ambiente.
 
 ## Características Principais
 

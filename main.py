@@ -14,6 +14,7 @@ Este arquivo contém a classe principal do assistente NOVA, responsável por:
 # Importações de bibliotecas padrão Python
 import sys      # Para manipulação de argumentos de linha de comando e saída do sistema
 import time     # Para controle de tempo e delays
+import re       # Para casar a wake word como palavra inteira (evita falso positivo em "novamente")
 import threading  # Para operações concorrentes (escuta contínua sem bloquear)
 import queue    # Para fila de comandos entre threads
 import asyncio  # Para operações assíncronas (edge-tts)
@@ -214,30 +215,29 @@ class NovaAssistant:
             wav_path = tmp_path.replace(".mp3", ".wav")
             ffmpeg_path = shutil.which("ffmpeg")
 
+            def fallback_playback(motivo):
+                # Player padrão do Windows: startfile() é assíncrono, não há como saber
+                # quando termina de tocar, então não apagamos o mp3 temporário aqui
+                # (evita apagar o arquivo enquanto ainda está sendo reproduzido).
+                print(f"[INFO] {motivo}, usando player padrão")
+                os.startfile(tmp_path)
+
             if ffmpeg_path:
-                result = subprocess.run([ffmpeg_path, '-i', tmp_path, wav_path], 
+                result = subprocess.run([ffmpeg_path, '-i', tmp_path, wav_path],
                                       capture_output=True, text=True)
-                
+
                 if result.returncode == 0:
                     # Reproduz com winsound (nativo do Windows)
                     import winsound
                     winsound.PlaySound(wav_path, winsound.SND_FILENAME)
-                    
+
                     # Remove arquivos temporários após reprodução
                     os.unlink(tmp_path)
                     os.unlink(wav_path)
                 else:
-                    # Fallback: player padrão
-                    print(f"[INFO] ffmpeg falhou, usando player padrão")
-                    os.startfile(tmp_path)
-                    time.sleep(2)
-                    os.unlink(tmp_path)
+                    fallback_playback("ffmpeg falhou")
             else:
-                # Fallback: player padrão
-                print(f"[INFO] ffmpeg não encontrado no PATH, usando player padrão")
-                os.startfile(tmp_path)
-                time.sleep(2)
-                os.unlink(tmp_path)
+                fallback_playback("ffmpeg não encontrado no PATH")
             
         except Exception as e:
             print(f"[ERRO] Falha na síntese de voz: {e}")
@@ -255,6 +255,11 @@ class NovaAssistant:
         
         # Variações fonéticas da wake word
         WAKE_VARIATIONS = ['nova', 'nóva', 'nôva', 'nôba', 'nóba']
+        # \b garante casar a palavra inteira (evita disparo falso em "novamente", "renovar" etc.)
+        WAKE_PATTERN = re.compile(
+            r'\b(?:' + '|'.join(re.escape(w) for w in WAKE_VARIATIONS) + r')\b',
+            re.IGNORECASE
+        )
         sample_rate = 16000
         
         def capture_speech(duration=3):
@@ -289,6 +294,8 @@ class NovaAssistant:
                     
             except Exception as e:
                 print(f"[ERRO] Falha ao capturar áudio: {e}")
+                # Evita spin de CPU (ex: microfone desconectado) tentando de novo sem pausa
+                time.sleep(1)
                 return None
         
         while self.running:
@@ -299,8 +306,8 @@ class NovaAssistant:
                 continue
             
             print(f"[DEBUG] Ouvido: '{text}'")
-            
-            if not any(w in text.lower() for w in WAKE_VARIATIONS):
+
+            if not WAKE_PATTERN.search(text):
                 continue  # Não foi a wake word, ignora
             
             # FASE 2 - Wake word detectada, aguarda o comando
@@ -317,9 +324,8 @@ class NovaAssistant:
                 self.speak("Não ouvi nada. Pode repetir?")
                 continue
             
-            # Remove a wake word do texto caso tenha vindo junto
-            for w in WAKE_VARIATIONS:
-                command = command.lower().replace(w, '').strip()
+            # Remove a wake word do texto caso tenha vindo junto (só palavra inteira)
+            command = WAKE_PATTERN.sub('', command.lower()).strip()
             
             if not command:
                 self.speak("Não ouvi o comando. O que deseja?")

@@ -414,7 +414,7 @@ def main():
     Função principal de entrada do programa
     
     Fluxo de execução:
-    1. Cria uma instância do JarvisAssistant
+    1. Cria uma instância do NovaAssistant
     2. Inicializa o sistema
     3. Inicia o loop principal
     4. Trata interrupções do usuário (Ctrl+C)

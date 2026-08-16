@@ -1,5 +1,7 @@
 # Componentes de Software - NOVA
 
+> **Nota sobre o estado atual:** este documento descreve a estrutura de módulos planejada (config/, core/, hardware/, automation/, utils/, tests/) e um requirements.txt de exemplo diferente do real. Nenhuma dessas pastas existe ainda — a implementação atual é só `main.py` + `test_audio.py`, usando Vosk + edge-tts. Consulte o `requirements.txt` na raiz do projeto para as dependências reais.
+
 ## Visão Geral
 
 O software do NOVA é desenvolvido em Python e organiza-se em módulos especializados que trabalham em conjunto para processar comandos de voz, tomar decisões inteligentes e controlar o hardware.

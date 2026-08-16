@@ -1,5 +1,7 @@
 # Guia de Instalação e Configuração - NOVA
 
+> **Nota sobre o estado atual:** este guia descreve a instalação completa planejada para o NOVA (incluindo hardware ESP32/Arduino, IA generativa e comunicação em rede). A implementação de hoje cobre apenas reconhecimento de voz offline com Vosk e síntese com edge-tts — veja `requirements.txt` e o [README](../README.md#status-atual-do-projeto) para o que realmente existe e como instalar.
+
 ## Pré-requisitos
 
 ### Sistema Operacional

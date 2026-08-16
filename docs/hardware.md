@@ -1,5 +1,7 @@
 # Componentes de Hardware - NOVA
 
+> **Nota sobre o estado atual:** a integração com hardware (ESP32/Arduino, firmware, sensores/atuadores) descrita aqui ainda não foi implementada — o projeto hoje é 100% software (`main.py` + `test_audio.py`, reconhecimento de voz e síntese). Este documento é a visão planejada para uma fase futura.
+
 ## Visão Geral
 
 O hardware do NOVA consiste em microcontroladores programados em C/C++ que atuam como interface física entre o sistema inteligente e o mundo real, controlando sensores e atuadores diversos.

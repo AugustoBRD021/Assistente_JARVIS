@@ -1,8 +1,8 @@
-# Protocolos de Comunicação - JARVIS
+# Protocolos de Comunicação - NOVA
 
 ## Visão Geral
 
-O sistema JARVIS utiliza múltiplos protocolos de comunicação para garantir interação eficiente e confiável entre os componentes de software e hardware. A arquitetura suporta comunicação serial, Wi-Fi e Bluetooth, com diferentes níveis de abstração para facilitar o desenvolvimento.
+O sistema NOVA utiliza múltiplos protocolos de comunicação para garantir interação eficiente e confiável entre os componentes de software e hardware. A arquitetura suporta comunicação serial, Wi-Fi e Bluetooth, com diferentes níveis de abstração para facilitar o desenvolvimento.
 
 ## Arquitetura de Comunicação
 
@@ -10,7 +10,7 @@ O sistema JARVIS utiliza múltiplos protocolos de comunicação para garantir in
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Camada de Aplicação                         │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
-│  │   JARVIS    │  │  Web UI     │  │  Mobile     │             │
+│  │   NOVA      │  │  Web UI     │  │  Mobile     │             │
 │  │   Core      │  │  Interface  │  │   App       │             │
 │  └─────────────┘  └─────────────┘  └─────────────┘             │
 └─────────────────────────────────────────────────────────────────┘
@@ -497,7 +497,7 @@ private:
 
 #### Estrutura de Topics
 ```
-jarvis/
+nova/
 ├── devices/
 │   ├── {device_id}/
 │   │   ├── command/
@@ -553,8 +553,8 @@ class MQTTCommunicator:
             print("Conectado ao broker MQTT")
             
             # Subscrever aos topics principais
-            self.subscribe("jarvis/devices/+/command")
-            self.subscribe("jarvis/system/+/response")
+            self.subscribe("nova/devices/+/command")
+            self.subscribe("nova/system/+/response")
             
         else:
             print(f"Falha na conexão MQTT: {rc}")
@@ -590,7 +590,7 @@ class MQTTCommunicator:
         return False
     
     def send_device_command(self, device_id, command, parameters=None):
-        topic = f"jarvis/devices/{device_id}/command"
+        topic = f"nova/devices/{device_id}/command"
         payload = {
             "command": command,
             "parameters": parameters or {},
@@ -599,7 +599,7 @@ class MQTTCommunicator:
         return self.publish(topic, payload)
     
     def send_device_status(self, device_id, status, data=None):
-        topic = f"jarvis/devices/{device_id}/status"
+        topic = f"nova/devices/{device_id}/status"
         payload = {
             "status": status,
             "data": data or {},
@@ -953,4 +953,4 @@ def test_latency(communicator, num_tests=10):
     }
 ```
 
-Este guia completo de protocolos de comunicação fornece uma base sólida para implementar comunicação confiável e segura entre todos os componentes do sistema JARVIS.
+Este guia completo de protocolos de comunicação fornece uma base sólida para implementar comunicação confiável e segura entre todos os componentes do sistema NOVA.

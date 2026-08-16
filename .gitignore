@@ -1,0 +1,7 @@
+# Python
+__pycache__/
+*.pyc
+
+# ffmpeg (baixado/extraído localmente, não faz parte do projeto)
+ffmpeg-8.1/
+ffmpeg-8.1.tar.xz

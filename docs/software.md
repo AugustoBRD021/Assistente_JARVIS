@@ -1,13 +1,13 @@
-# Componentes de Software - JARVIS
+# Componentes de Software - NOVA
 
 ## Visão Geral
 
-O software do JARVIS é desenvolvido em Python e organiza-se em módulos especializados que trabalham em conjunto para processar comandos de voz, tomar decisões inteligentes e controlar o hardware.
+O software do NOVA é desenvolvido em Python e organiza-se em módulos especializados que trabalham em conjunto para processar comandos de voz, tomar decisões inteligentes e controlar o hardware.
 
 ## Estrutura do Projeto
 
 ```
-jarvis/
+nova/
 ├── main.py                 # Ponto de entrada principal
 ├── config/
 │   ├── __init__.py
@@ -279,7 +279,7 @@ class SystemAutomation:
 ```python
 # Configurações de voz
 VOICE_SETTINGS = {
-    'wake_word': 'jarvis',
+    'wake_word': 'nova',
     'language': 'pt-BR',
     'recognition_engine': 'google',
     'synthesis_engine': 'gtts'
@@ -325,7 +325,7 @@ def main():
     device_controller = DeviceController()
     
     # Inicia loop principal
-    jarvis = JarvisAssistant(
+    nova = NovaAssistant(
         voice_engine=voice_engine,
         ai_processor=ai_processor,
         decision_engine=decision_engine,
@@ -333,7 +333,7 @@ def main():
         device_controller=device_controller
     )
     
-    jarvis.run()
+    nova.run()
 ```
 
 ### 2. Processamento de Comando
@@ -409,8 +409,8 @@ class TestVoiceEngine(unittest.TestCase):
 ```python
 class TestIntegration(unittest.TestCase):
     def test_full_command_flow(self):
-        jarvis = JarvisAssistant()
-        result = jarvis.process_command(mock_audio)
+        nova = NovaAssistant()
+        result = nova.process_command(mock_audio)
         self.assertTrue(result.success)
 ```
 

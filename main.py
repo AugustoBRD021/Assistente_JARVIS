@@ -18,11 +18,8 @@ import threading  # Para operações concorrentes (escuta contínua sem bloquear
 import queue    # Para fila de comandos entre threads
 import asyncio  # Para operações assíncronas (edge-tts)
 import subprocess  # Para executar comandos do sistema (ffmpeg)
-from pathlib import Path  # Para manipulação de caminhos de arquivos de forma segura
-import numpy as np  # Para processar arrays de áudio
 import sounddevice as sd  # Para verificar o microfone
 import edge_tts  # Para síntese de voz neural da Microsoft
-import simpleaudio  # Para reprodução de áudio
 import tempfile  # Para arquivos temporários
 import os  # Para manipulação de arquivos
 import shutil  # Para localizar o executável do ffmpeg no PATH
@@ -76,7 +73,7 @@ class NovaAssistant:
         
         Implementação completa:
         - Carregar o modelo Vosk para reconhecimento de voz
-        - Configurar o sintetizador de voz (pyttsx3)
+        - Configurar o sintetizador de voz (edge-tts)
         - Verificar dispositivos de áudio disponíveis
         - Preparar comunicação com hardware (se disponível)
         - Configurar parâmetros iniciais do sistema
@@ -151,9 +148,19 @@ class NovaAssistant:
             for device in self.audio_devices:
                 print(f"   - {device['name']} (ID: {device['id']})")
             
-            # Selecionar automaticamente o primeiro dispositivo
-            self.selected_device = self.audio_devices[0]['id']
-            print(f"[OK] Dispositivo selecionado: {self.audio_devices[0]['name']}")
+            # Selecionar o dispositivo de entrada padrão do sistema, se disponível;
+            # caso contrário, cai para o primeiro dispositivo de entrada encontrado
+            try:
+                default_input_id = sd.default.device[0]
+            except Exception:
+                default_input_id = -1
+
+            default_device = next(
+                (d for d in self.audio_devices if d['id'] == default_input_id), None
+            )
+            selected = default_device or self.audio_devices[0]
+            self.selected_device = selected['id']
+            print(f"[OK] Dispositivo selecionado: {selected['name']}")
             
             # 4. Testar componentes
             print("4. Testando componentes...")
@@ -173,7 +180,8 @@ class NovaAssistant:
         except Exception as e:
             print(f"[ERRO] Falha na inicialização: {e}")
             print("[INFO] Verifique se todas as dependências estão instaladas:")
-            print("      pip install vosk pyttsx3 sounddevice numpy")
+            print("      pip install vosk edge-tts sounddevice numpy")
+            print("[INFO] Verifique se o ffmpeg está instalado e disponível no PATH")
             print("[INFO] Verifique se o modelo Vosk está no local correto")
             print("[INFO] Verifique se o microfone está conectado")
             return False

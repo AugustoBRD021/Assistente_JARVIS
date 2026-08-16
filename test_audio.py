@@ -30,7 +30,14 @@ def test_imports():
     except ImportError as e:
         print(f"[ERRO] Erro ao importar pyttsx3: {e}")
         return False
-    
+
+    try:
+        import edge_tts
+        print("[OK] edge_tts importado com sucesso")
+    except ImportError as e:
+        print(f"[ERRO] Erro ao importar edge_tts: {e}")
+        return False
+
     try:
         import sounddevice as sd
         print("[OK] sounddevice importado com sucesso")

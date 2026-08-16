@@ -1,18 +1,22 @@
-# Reconhecimento de voz (alternativas sem PyAudio)
+# Reconhecimento de voz offline (usado em produção via test_audio.VoskRecognizer)
+vosk==0.3.45
+
+# Reconhecimento de voz (fallback online, usado em test_audio.py)
 SpeechRecognition==3.16.1
 
-# Síntese de voz
+# Síntese de voz (usado em produção); pyttsx3 é usado apenas no teste legado test_audio.py
+edge-tts==7.2.8
 pyttsx3==2.99
 
-# Alternativas para captura de áudio
+# Captura de áudio
 sounddevice==0.5.5
 numpy>=2.4.4
 
-# Utilitários de áudio
-pydub==0.25.1
+# NOTA: webrtcvad foi avaliado para VAD (deteccao de atividade de voz) mas nao
+# consegue ser instalado nesta maquina/versao do Python sem Visual Studio Build
+# Tools (nao ha wheel pre-compilada para Python 3.14 no Windows). pydub e scipy
+# tambem foram removidos por nao estarem em uso em nenhum lugar do codigo.
 
-# Para processamento de áudio
-scipy>=1.11.0
-
-# Para gravação de áudio sem PyAudio
-webrtcvad==2.0.10
+# NOTA: a conversão MP3->WAV em main.py depende do binário ffmpeg,
+# que precisa estar instalado no sistema e disponível no PATH (não é um
+# pacote pip). Veja https://ffmpeg.org/download.html

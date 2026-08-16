@@ -1,5 +1,7 @@
 # Protocolos de Comunicação - NOVA
 
+> **Nota sobre o estado atual:** os protocolos de comunicação (serial, Wi-Fi, Bluetooth, MQTT, Web UI, app mobile) descritos aqui ainda não foram implementados — não há nenhum código de comunicação com hardware ou rede no projeto hoje. Este documento é a visão planejada para uma fase futura.
+
 ## Visão Geral
 
 O sistema NOVA utiliza múltiplos protocolos de comunicação para garantir interação eficiente e confiável entre os componentes de software e hardware. A arquitetura suporta comunicação serial, Wi-Fi e Bluetooth, com diferentes níveis de abstração para facilitar o desenvolvimento.

@@ -14,21 +14,48 @@ Este arquivo contém a classe principal do assistente NOVA, responsável por:
 # Importações de bibliotecas padrão Python
 import sys      # Para manipulação de argumentos de linha de comando e saída do sistema
 import time     # Para controle de tempo e delays
+import json     # Para decodificar os resultados do reconhecedor Vosk
+import re       # Para casar a wake word como palavra inteira (evita falso positivo em "novamente")
+import unicodedata  # Para normalizar acentos ao comparar comandos reconhecidos
 import threading  # Para operações concorrentes (escuta contínua sem bloquear)
 import queue    # Para fila de comandos entre threads
 import asyncio  # Para operações assíncronas (edge-tts)
 import subprocess  # Para executar comandos do sistema (ffmpeg)
-from pathlib import Path  # Para manipulação de caminhos de arquivos de forma segura
-import numpy as np  # Para processar arrays de áudio
 import sounddevice as sd  # Para verificar o microfone
 import edge_tts  # Para síntese de voz neural da Microsoft
-import simpleaudio  # Para reprodução de áudio
 import tempfile  # Para arquivos temporários
 import os  # Para manipulação de arquivos
 import shutil  # Para localizar o executável do ffmpeg no PATH
+from datetime import datetime  # Para informar a data/hora atual nas respostas locais
 
 # Importação de nossos módulos personalizados
 from test_audio import VoskRecognizer  # Importa nossa classe de reconhecimento de voz já testada
+
+# Nomes dos meses em pt-BR, independente da locale configurada no sistema
+# (strftime("%B") cai para inglês quando a locale pt-BR não está instalada)
+MESES_PT_BR = {
+    1: 'janeiro', 2: 'fevereiro', 3: 'março', 4: 'abril',
+    5: 'maio', 6: 'junho', 7: 'julho', 8: 'agosto',
+    9: 'setembro', 10: 'outubro', 11: 'novembro', 12: 'dezembro',
+}
+
+
+def _padrao_palavras(*frases):
+    """Compila um regex que casa qualquer uma das frases como palavra(s) inteira(s)"""
+    return re.compile(r'\b(?:' + '|'.join(re.escape(f) for f in frases) + r')\b', re.IGNORECASE)
+
+
+def remover_acentos(texto):
+    """Remove acentos para tornar a comparação de comandos resistente a variações do Vosk"""
+    return ''.join(c for c in unicodedata.normalize('NFKD', texto) if not unicodedata.combining(c))
+
+
+# Padrões de reconhecimento de intenção usados em process_command (sem acentos,
+# pois o texto reconhecido é normalizado antes de comparar)
+PADRAO_SAUDACAO = _padrao_palavras('ola', 'oi', 'e ai', 'bom dia', 'boa tarde', 'boa noite')
+PADRAO_HORAS = _padrao_palavras('que horas sao', 'que horas', 'horas', 'horario', 'hora atual')
+PADRAO_DATA = _padrao_palavras('que dia e hoje', 'que dia', 'data de hoje', 'dia de hoje', 'data', 'dia', 'hoje')
+PADRAO_ENCERRAR = _padrao_palavras('encerrar', 'pare', 'parar', 'desligar', 'sair', 'tchau')
 
 
 class NovaAssistant:
@@ -65,6 +92,7 @@ class NovaAssistant:
         self.listening_thread = None        # Thread para escuta contínua em background
         self.command_queue = queue.Queue()  # Fila de comandos entre threads
         self.last_wake_word_time = 0        # Timestamp da última wake word detectada
+        self.speaking = threading.Event()   # Sinaliza quando a NOVA está falando (evita ouvir a si mesma)
         
         # Mensagens de inicialização para feedback ao usuário
         print("NOVA - Assistente Virtual Inteligente")
@@ -76,7 +104,7 @@ class NovaAssistant:
         
         Implementação completa:
         - Carregar o modelo Vosk para reconhecimento de voz
-        - Configurar o sintetizador de voz (pyttsx3)
+        - Configurar o sintetizador de voz (edge-tts)
         - Verificar dispositivos de áudio disponíveis
         - Preparar comunicação com hardware (se disponível)
         - Configurar parâmetros iniciais do sistema
@@ -119,7 +147,7 @@ class NovaAssistant:
                 print(f"[ERRO] Erro ao configurar síntese de voz: {e}")
                 print("[INFO] Verifique se edge-tts está instalado: pip install edge-tts")
                 return False
-            
+
             # 3. Verificar dispositivos de áudio
             print("3. Verificando dispositivos de áudio...")
             try:
@@ -151,9 +179,19 @@ class NovaAssistant:
             for device in self.audio_devices:
                 print(f"   - {device['name']} (ID: {device['id']})")
             
-            # Selecionar automaticamente o primeiro dispositivo
-            self.selected_device = self.audio_devices[0]['id']
-            print(f"[OK] Dispositivo selecionado: {self.audio_devices[0]['name']}")
+            # Selecionar o dispositivo de entrada padrão do sistema, se disponível;
+            # caso contrário, cai para o primeiro dispositivo de entrada encontrado
+            try:
+                default_input_id = sd.default.device[0]
+            except Exception:
+                default_input_id = -1
+
+            default_device = next(
+                (d for d in self.audio_devices if d['id'] == default_input_id), None
+            )
+            selected = default_device or self.audio_devices[0]
+            self.selected_device = selected['id']
+            print(f"[OK] Dispositivo selecionado: {selected['name']}")
             
             # 4. Testar componentes
             print("4. Testando componentes...")
@@ -173,7 +211,8 @@ class NovaAssistant:
         except Exception as e:
             print(f"[ERRO] Falha na inicialização: {e}")
             print("[INFO] Verifique se todas as dependências estão instaladas:")
-            print("      pip install vosk pyttsx3 sounddevice numpy")
+            print("      pip install vosk edge-tts sounddevice numpy")
+            print("[INFO] Verifique se o ffmpeg está instalado e disponível no PATH")
             print("[INFO] Verifique se o modelo Vosk está no local correto")
             print("[INFO] Verifique se o microfone está conectado")
             return False
@@ -186,18 +225,22 @@ class NovaAssistant:
             text (str): Texto a ser falado pelo assistente
         """
         print(f"NOVA: {text}")
-        
+
+        # Sinaliza que está falando para a thread de escuta pausar a captura
+        # e não interpretar a própria voz da NOVA como um comando do usuário
+        self.speaking.set()
+
         async def _falar():
             # Gera o áudio com a voz Francisca BR em formato MP3
             communicate = edge_tts.Communicate(text, voice="pt-BR-FranciscaNeural")
-            
+
             # Salva em arquivo temporário MP3
             with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
                 tmp_path = f.name
-            
+
             await communicate.save(tmp_path)
             return tmp_path
-        
+
         try:
             # Gera o arquivo de áudio MP3
             tmp_path = asyncio.run(_falar())
@@ -206,119 +249,137 @@ class NovaAssistant:
             wav_path = tmp_path.replace(".mp3", ".wav")
             ffmpeg_path = shutil.which("ffmpeg")
 
+            def fallback_playback(motivo):
+                # Player padrão do Windows: startfile() é assíncrono, não há como saber
+                # quando termina de tocar, então não apagamos o mp3 temporário aqui
+                # (evita apagar o arquivo enquanto ainda está sendo reproduzido).
+                print(f"[INFO] {motivo}, usando player padrão")
+                os.startfile(tmp_path)
+
             if ffmpeg_path:
-                result = subprocess.run([ffmpeg_path, '-i', tmp_path, wav_path], 
+                result = subprocess.run([ffmpeg_path, '-i', tmp_path, wav_path],
                                       capture_output=True, text=True)
-                
+
                 if result.returncode == 0:
                     # Reproduz com winsound (nativo do Windows)
                     import winsound
                     winsound.PlaySound(wav_path, winsound.SND_FILENAME)
-                    
+
                     # Remove arquivos temporários após reprodução
                     os.unlink(tmp_path)
                     os.unlink(wav_path)
                 else:
-                    # Fallback: player padrão
-                    print(f"[INFO] ffmpeg falhou, usando player padrão")
-                    os.startfile(tmp_path)
-                    time.sleep(2)
-                    os.unlink(tmp_path)
+                    fallback_playback("ffmpeg falhou")
             else:
-                # Fallback: player padrão
-                print(f"[INFO] ffmpeg não encontrado no PATH, usando player padrão")
-                os.startfile(tmp_path)
-                time.sleep(2)
-                os.unlink(tmp_path)
+                fallback_playback("ffmpeg não encontrado no PATH")
             
         except Exception as e:
             print(f"[ERRO] Falha na síntese de voz: {e}")
-    
+        finally:
+            self.speaking.clear()
+
     def listen_for_wake_word(self):
         """
-        Escuta continuamente pela wake word em duas fases
-        
-        FASE 1 - Escuta passiva pela wake word (chunks de 2s)
-        FASE 2 - Wake word detectada, aguarda comando (até 5s)
-        
+        Escuta continuamente pela wake word usando um stream de áudio contínuo
+
+        Ao contrário de gravar em blocos fixos com pausas entre eles (o que corta
+        palavras faladas bem na borda de um bloco), aqui o microfone fica sempre
+        aberto e o áudio é processado em tempo real pelo Vosk. A wake word e o
+        comando seguinte são reconhecidos como frases completas assim que o Vosk
+        detecta uma pausa na fala (fim de utterance).
+
         Funciona em loop contínuo enquanto self.running = True
         """
         print("[INFO] Iniciando escuta contínua pela wake word...")
-        
+
         # Variações fonéticas da wake word
         WAKE_VARIATIONS = ['nova', 'nóva', 'nôva', 'nôba', 'nóba']
+        # \b garante casar a palavra inteira (evita disparo falso em "novamente", "renovar" etc.)
+        WAKE_PATTERN = re.compile(
+            r'\b(?:' + '|'.join(re.escape(w) for w in WAKE_VARIATIONS) + r')\b',
+            re.IGNORECASE
+        )
         sample_rate = 16000
-        
-        def capture_speech(duration=3):
-            """
-            Captura áudio e retorna o texto reconhecido, ou None
-            
-            Args:
-                duration (int): Duração da captura em segundos
-            
-            Returns:
-                str: Texto reconhecido ou None se falhar
-            """
-            import json
-            chunk_size = int(sample_rate * duration)
+        # Bloco pequeno (125ms) em vez dos 500ms originais: medido em teste offline que isso
+        # não piora a precisão do Vosk, mas deixa a extensão do prazo de comando (abaixo)
+        # reagir bem mais rápido à fala em andamento
+        TAMANHO_BLOCO = 2000
+        TIMEOUT_COMANDO = 8  # segundos de silêncio tolerados antes de desistir do comando
+
+        # Eventos vindos do callback de áudio (thread separada, gerenciada pelo PortAudio):
+        # ('final', texto) quando o Vosk fecha uma frase, ('parcial', None) enquanto ainda
+        # há fala em andamento (usado só para estender o prazo de espera do comando)
+        eventos_audio = queue.Queue()
+
+        def callback(indata, frames, time_info, status):
+            if self.speaking.is_set():
+                return  # não alimenta o reconhecedor com a própria voz da NOVA
             try:
-                audio_chunk = sd.rec(
-                    frames=chunk_size,
-                    samplerate=sample_rate,
-                    channels=1,
-                    dtype='int16',
-                    device=self.selected_device
-                )
-                sd.wait()
-                audio_bytes = audio_chunk.tobytes()
-                
-                if self.vosk_recognizer.recognizer.AcceptWaveform(audio_bytes):
+                raw = bytes(indata)
+                if self.vosk_recognizer.recognizer.AcceptWaveform(raw):
                     result = json.loads(self.vosk_recognizer.recognizer.Result())
-                    return result.get('text', '').strip()
+                    texto = result.get('text', '').strip()
+                    if texto:
+                        eventos_audio.put(('final', texto))
                 else:
-                    partial = json.loads(self.vosk_recognizer.recognizer.PartialResult())
-                    return partial.get('text', '').strip()
-                    
+                    parcial = json.loads(self.vosk_recognizer.recognizer.PartialResult())
+                    if parcial.get('partial', '').strip():
+                        eventos_audio.put(('parcial', None))
             except Exception as e:
-                print(f"[ERRO] Falha ao capturar áudio: {e}")
-                return None
-        
+                print(f"[ERRO] Falha ao processar áudio: {e}")
+
+        aguardando_comando = False
+        prazo_comando = 0.0
+
+        # Loop externo: se o stream de áudio cair (ex: microfone desconectado),
+        # tenta reabrir em vez de encerrar a escuta permanentemente
         while self.running:
-            # FASE 1 - Escuta passiva pela wake word (chunks de 2s)
-            text = capture_speech(duration=2)
-            
-            if not text:
-                continue
-            
-            print(f"[DEBUG] Ouvido: '{text}'")
-            
-            if not any(w in text.lower() for w in WAKE_VARIATIONS):
-                continue  # Não foi a wake word, ignora
-            
-            # FASE 2 - Wake word detectada, aguarda o comando
-            print("[INFO] Wake word detectada!")
-            self.speak("Sim?")
-            
-            # Pequena pausa para o TTS terminar antes de escutar de novo
-            time.sleep(0.8)
-            
-            print("[INFO] Aguardando comando...")
-            command = capture_speech(duration=7)
-            
-            if not command:
-                self.speak("Não ouvi nada. Pode repetir?")
-                continue
-            
-            # Remove a wake word do texto caso tenha vindo junto
-            for w in WAKE_VARIATIONS:
-                command = command.lower().replace(w, '').strip()
-            
-            if not command:
-                self.speak("Não ouvi o comando. O que deseja?")
-                continue
-            
-            print(f"[INFO] Comando capturado: '{command}'")
-            self.command_queue.put(command)
+            try:
+                with sd.RawInputStream(samplerate=sample_rate, blocksize=TAMANHO_BLOCO, dtype='int16',
+                                        channels=1, device=self.selected_device, callback=callback):
+                    while self.running:
+                        if aguardando_comando and time.time() > prazo_comando:
+                            aguardando_comando = False
+                            self.speak("Não ouvi nada. Pode repetir?")
+                            continue
+
+                        try:
+                            tipo, texto = eventos_audio.get(timeout=0.1)
+                        except queue.Empty:
+                            continue
+
+                        if tipo == 'parcial':
+                            # Ainda há fala em andamento: estende o prazo em vez de
+                            # deixar o timeout estourar no meio da frase do usuário
+                            if aguardando_comando:
+                                prazo_comando = time.time() + TIMEOUT_COMANDO
+                            continue
+
+                        print(f"[DEBUG] Ouvido: '{texto}'")
+
+                        if not aguardando_comando:
+                            if not WAKE_PATTERN.search(texto):
+                                continue  # Não foi a wake word, ignora
+
+                            print("[INFO] Wake word detectada!")
+                            self.speak("Sim?")
+                            aguardando_comando = True
+                            prazo_comando = time.time() + TIMEOUT_COMANDO
+                            print("[INFO] Aguardando comando...")
+                        else:
+                            # Remove a wake word do texto caso tenha vindo junto (só palavra inteira)
+                            comando = WAKE_PATTERN.sub('', texto.lower()).strip()
+                            aguardando_comando = False
+
+                            if not comando:
+                                self.speak("Não ouvi o comando. O que deseja?")
+                                continue
+
+                            print(f"[INFO] Comando capturado: '{comando}'")
+                            self.command_queue.put(comando)
+            except Exception as e:
+                print(f"[ERRO] Falha na escuta contínua: {e}")
+                time.sleep(1)
     
     def process_command(self, command):
         """
@@ -333,25 +394,23 @@ class NovaAssistant:
         - Gera uma resposta
         - Usa speak() para vocalizar a resposta
         """
-        command_lower = command.lower().strip()
-        
-        # Comandos básicos
-        if "olá" in command_lower or "oi" in command_lower:
+        command_lower = remover_acentos(command.lower().strip())
+
+        if PADRAO_SAUDACAO.search(command_lower):
             self.speak("Olá! Como posso ajudar?")
-        elif "que horas são" in command_lower or "horas" in command_lower:
-            from datetime import datetime
+        elif PADRAO_HORAS.search(command_lower):
             hora = datetime.now().strftime("%H:%M")
             self.speak(f"Agora são {hora}")
-        elif "que dia é hoje" in command_lower or "data" in command_lower:
-            from datetime import datetime
-            data = datetime.now().strftime("%d de %B de %Y")
-            self.speak(f"Hoje é {data}")
-        elif "encerrar" in command_lower or "pare" in command_lower:
+        elif PADRAO_DATA.search(command_lower):
+            agora = datetime.now()
+            mes = MESES_PT_BR[agora.month]
+            self.speak(f"Hoje é {agora.day} de {mes} de {agora.year}")
+        elif PADRAO_ENCERRAR.search(command_lower):
             self.speak("Encerrando sistema...")
             self.running = False
         else:
             self.speak("Desculpe, não entendi o comando.")
-    
+
     def run(self):
         """
         Loop principal do assistente
@@ -400,7 +459,7 @@ def main():
     Função principal de entrada do programa
     
     Fluxo de execução:
-    1. Cria uma instância do JarvisAssistant
+    1. Cria uma instância do NovaAssistant
     2. Inicializa o sistema
     3. Inicia o loop principal
     4. Trata interrupções do usuário (Ctrl+C)

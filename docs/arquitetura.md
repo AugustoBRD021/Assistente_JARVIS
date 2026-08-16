@@ -1,5 +1,7 @@
 # Arquitetura do Sistema NOVA
 
+> **Nota sobre o estado atual:** este documento descreve a arquitetura completa planejada para o NOVA. A implementação de hoje (`main.py` + `test_audio.py`) cobre apenas reconhecimento de voz offline com Vosk, detecção de wake word ("nova") e síntese de voz com edge-tts — sem integração com hardware, IA generativa ou comunicação em rede ainda. Veja o [README](../README.md#status-atual-do-projeto) para o progresso real.
+
 ## Visão Geral da Arquitetura
 
 O sistema NOVA segue uma arquitetura modular e distribuída, dividida em três camadas principais:
@@ -28,7 +30,7 @@ O sistema NOVA segue uma arquitetura modular e distribuída, dividida em três c
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
 │  │Reconheci-   │  │ Inteligência│  │  Tomada de  │             │
 │  │mento de Voz │──│ Artificial  │──│  Decisão    │             │
-│  │             │  │ (ChatGPT)   │  │             │             │
+│  │             │  │  (Claude)   │  │             │             │
 │  └─────────────┘  └─────────────┘  └─────────────┘             │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
 │  │Automação    │  │ Gerencia-   │  │  Protocolos │             │

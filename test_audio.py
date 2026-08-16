@@ -30,7 +30,14 @@ def test_imports():
     except ImportError as e:
         print(f"[ERRO] Erro ao importar pyttsx3: {e}")
         return False
-    
+
+    try:
+        import edge_tts
+        print("[OK] edge_tts importado com sucesso")
+    except ImportError as e:
+        print(f"[ERRO] Erro ao importar edge_tts: {e}")
+        return False
+
     try:
         import sounddevice as sd
         print("[OK] sounddevice importado com sucesso")
@@ -82,7 +89,7 @@ class VoskRecognizer:
     def audio_callback(self, indata, frames, time, status):
         """Callback para processamento de audio"""
         import sounddevice as sd
-        if self.recognizing and self.recognizer.AcceptWaveform(indata):
+        if self.recognizing and self.recognizer.AcceptWaveform(bytes(indata)):
             result = json.loads(self.recognizer.Result())
             if result['text']:
                 self.result_text = result['text']

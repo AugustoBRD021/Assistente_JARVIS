@@ -25,6 +25,7 @@ import edge_tts  # Para síntese de voz neural da Microsoft
 import simpleaudio  # Para reprodução de áudio
 import tempfile  # Para arquivos temporários
 import os  # Para manipulação de arquivos
+import shutil  # Para localizar o executável do ffmpeg no PATH
 
 # Importação de nossos módulos personalizados
 from test_audio import VoskRecognizer  # Importa nossa classe de reconhecimento de voz já testada
@@ -201,11 +202,11 @@ class NovaAssistant:
             # Gera o arquivo de áudio MP3
             tmp_path = asyncio.run(_falar())
             
-            # Converte MP3 para WAV usando ffmpeg (caminho completo)
+            # Converte MP3 para WAV usando ffmpeg (localizado dinamicamente no PATH)
             wav_path = tmp_path.replace(".mp3", ".wav")
-            ffmpeg_path = r"C:\ffmpeg\ffmpeg-8.1-essentials_build\bin\ffmpeg.exe"
-            
-            if os.path.exists(ffmpeg_path):
+            ffmpeg_path = shutil.which("ffmpeg")
+
+            if ffmpeg_path:
                 result = subprocess.run([ffmpeg_path, '-i', tmp_path, wav_path], 
                                       capture_output=True, text=True)
                 
@@ -225,7 +226,7 @@ class NovaAssistant:
                     os.unlink(tmp_path)
             else:
                 # Fallback: player padrão
-                print(f"[INFO] ffmpeg não encontrado em {ffmpeg_path}, usando player padrão")
+                print(f"[INFO] ffmpeg não encontrado no PATH, usando player padrão")
                 os.startfile(tmp_path)
                 time.sleep(2)
                 os.unlink(tmp_path)

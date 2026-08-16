@@ -12,14 +12,10 @@ pyttsx3==2.99
 sounddevice==0.5.5
 numpy>=2.4.4
 
-# Utilitários de áudio
-pydub==0.25.1
-
-# Para processamento de áudio
-scipy>=1.11.0
-
-# Para gravação de áudio sem PyAudio
-webrtcvad==2.0.10
+# NOTA: webrtcvad foi avaliado para VAD (deteccao de atividade de voz) mas nao
+# consegue ser instalado nesta maquina/versao do Python sem Visual Studio Build
+# Tools (nao ha wheel pre-compilada para Python 3.14 no Windows). pydub e scipy
+# tambem foram removidos por nao estarem em uso em nenhum lugar do codigo.
 
 # NOTA: a conversão MP3->WAV em main.py depende do binário ffmpeg,
 # que precisa estar instalado no sistema e disponível no PATH (não é um

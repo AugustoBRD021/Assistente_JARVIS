@@ -89,7 +89,7 @@ class VoskRecognizer:
     def audio_callback(self, indata, frames, time, status):
         """Callback para processamento de audio"""
         import sounddevice as sd
-        if self.recognizing and self.recognizer.AcceptWaveform(indata):
+        if self.recognizing and self.recognizer.AcceptWaveform(bytes(indata)):
             result = json.loads(self.recognizer.Result())
             if result['text']:
                 self.result_text = result['text']
